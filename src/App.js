@@ -1,13 +1,17 @@
-import React, { useRef, useState } from "react";
+import axios from "axios";
+import React, { useEffect, useRef, useState } from "react";
 import TodoEdit from "./components/TodoEdit";
 import TodoInsert from "./components/TodoInsert";
 import TodoList from "./components/TodoList";
 import TodoTemplate from "./components/TodoTemplate";
+
 function App() {
   const [todos, setTodos] = useState([]);
   const [insertToggle, setInsertToggle] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState(null);
-  const nextId = useRef(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const nextId = useRef(4);
 
   const onInsert = (text) => {
     const todo = {
@@ -23,11 +27,19 @@ function App() {
     setInsertToggle((prev) => !prev);
   };
 
-  const onRemove = (id) => {
+  const onRemove = async (id) => {
+    await axios({
+      url: `http://localhost:4000/todos/${id}`,
+      method: "DELETE",
+    });
     setTodos((todos) => todos.filter((todo) => todo.id !== id));
   };
 
-  const onToggle = (id) => {
+  const onToggle = async (id) => {
+    await axios({
+      url: `http://localhost:4000/todos/check/${id}`,
+      method: "PATCH",
+    });
     setTodos((todos) =>
       todos.map((todo) =>
         todo.id === id ? { ...todo, checked: !todo.checked } : todo
@@ -35,12 +47,50 @@ function App() {
     );
   };
 
-  const onUpdate = (id, text) => {
+  const onUpdate = async (id, text) => {
+    await axios({
+      url: `http://localhost:4000/todos/${id}`,
+      method: "PATCH",
+      data: { text },
+    });
     setTodos((todos) =>
       todos.map((todo) => (todo.id === id ? { ...todo, text } : todo))
     );
     onInsertToggle();
   };
+
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const data = await axios({
+          url: "http://localhost:4000/todos",
+          method: "GET",
+        });
+
+        console.log(data.data);
+        setTodos(data.data);
+        setIsLoading(false);
+        // throw new Error("조회중 에러발생!!");
+        // await new Promise((resolve, reject) => {
+        //   setTimeout(() => {
+        //     resolve()
+        //   }, 3000)
+        // })
+      } catch (e) {
+        setError(e);
+      }
+    };
+
+    getData();
+  }, []);
+
+  if (error) {
+    return <>에러: {error.message}</>;
+  }
+
+  if (isLoading) {
+    return <>Loading...</>;
+  }
 
   return (
     <TodoTemplate>
